@@ -36,7 +36,7 @@ async function main() {
   const avisos = [];
 
   // Sequencial de propósito: são poucas unidades e o ViaCEP é uma API pública
-  // e gratuita — não faz sentido disparar tudo de uma vez em cima dela.
+  // e gratuita, não faz sentido disparar tudo de uma vez em cima dela.
   for (const unidade of unidades) {
     const identificacao = unidade.nome || `linha ${unidade.linha}`;
 
@@ -53,11 +53,11 @@ async function main() {
       }
 
       provisionadas.push(montarRegistroDeProvisionamento(unidade, endereco));
-      console.log(`  [ok]    ${identificacao} — ${endereco.logradouro}, ${endereco.bairro}`);
+      console.log(`  [ok]    ${identificacao}: ${endereco.logradouro}, ${endereco.bairro}`);
     } catch (erro) {
       // Uma unidade com problema não pode interromper as outras.
       falhas.push({ unidade: identificacao, motivo: erro.message });
-      console.log(`  [falha] ${identificacao} — ${erro.message}`);
+      console.log(`  [falha] ${identificacao}: ${erro.message}`);
     }
   }
 
@@ -65,14 +65,14 @@ async function main() {
 
   imprimirResumo({ saida, total: unidades.length, provisionadas, falhas, avisos });
 
-  // Sai com erro só quando nada foi provisionado — assim quem chamar o script
+  // Sai com erro só quando nada foi provisionado, assim quem chamar o script
   // de dentro de outra automação percebe que a rodada não produziu nada,
   // mas um sucesso parcial continua sendo sucesso.
   process.exitCode = provisionadas.length === 0 ? 1 : 0;
 }
 
 function imprimirResumo({ saida, total, provisionadas, falhas, avisos }) {
-  console.log('\n─────────── resumo ───────────');
+  console.log('\n=========== resumo ===========');
   console.log(`  processadas: ${total}`);
   console.log(`  sucesso:     ${provisionadas.length}`);
   console.log(`  falhas:      ${falhas.length}`);
@@ -92,7 +92,7 @@ function imprimirResumo({ saida, total, provisionadas, falhas, avisos }) {
   }
 
   console.log(`\n  arquivo gerado: ${saida}`);
-  console.log('──────────────────────────────\n');
+  console.log('==============================\n');
 }
 
 main();

@@ -1,4 +1,4 @@
-# Provisionamento de unidades — Desafio Técnico Filazero
+# Provisionamento de unidades, Desafio Técnico Filazero
 
 Automação que lê uma lista de unidades em CSV, completa o endereço de cada uma
 consultando a API pública do [ViaCEP](https://viacep.com.br) e gera o
@@ -6,9 +6,9 @@ consultando a API pública do [ViaCEP](https://viacep.com.br) e gera o
 plataforma.
 
 **Por que existe:** abrir três unidades é rápido na mão; abrir trinta não é. E o
-trabalho manual erra justamente onde dói — endereço trocado, serviço faltando,
+trabalho manual erra justamente onde dói: endereço trocado, serviço faltando,
 slug duplicado. O script resolve o caso pequeno de hoje já preparado para o
-volume de amanhã, e principalmente **não morre no meio**: um CEP errado ou a API
+volume de amanhã, e principalmente **não morre no meio**. Um CEP errado ou a API
 fora do ar viram uma linha no relatório, não uma execução perdida.
 
 ---
@@ -35,8 +35,8 @@ npm install
 ```
 
 O projeto **não tem dependências de runtime**, então esse comando não baixa
-nada — ele só confere o `package-lock.json`. Se preferir, pode pular direto
-para o passo 3.
+nada, ele só confere o `package-lock.json`. Se preferir, pode pular direto para
+o passo 3.
 
 **3. Rode a automação**
 
@@ -73,28 +73,28 @@ npm test
 ```
 Lendo 3 unidade(s) de "unidades.csv"...
 
-  [ok]    Clínica Vida Aracaju — Rua Boquim, Centro
-  [ok]    Clínica Vida Salvador — Rua Miguel Calmon, Comércio
-  [ok]    Clínica Vida Recife — Rua do Hospício, Boa Vista
+  [ok]    Clínica Vida Aracaju: Rua Boquim, Centro
+  [ok]    Clínica Vida Salvador: Rua Miguel Calmon, Comércio
+  [ok]    Clínica Vida Recife: Rua do Hospício, Boa Vista
 
-─────────── resumo ───────────
+=========== resumo ===========
   processadas: 3
   sucesso:     3
   falhas:      0
 
   arquivo gerado: provisionamento.json
-──────────────────────────────
+==============================
 ```
 
 Quando alguma unidade falha, ela aparece no resumo com o motivo e o script segue
 normalmente:
 
 ```
-  [falha] Clínica CEP Curto — CEP "4901" é inválido: esperado 8 dígitos, encontrado 4
-  [falha] Clínica Inexistente — CEP não encontrado na base do ViaCEP
-  [falha] Clínica Offline — ViaCEP indisponível após 3 tentativas (ViaCEP respondeu HTTP 500)
+  [falha] Clínica CEP Curto: CEP "4901" é inválido: esperado 8 dígitos, encontrado 4
+  [falha] Clínica Inexistente: CEP não encontrado na base do ViaCEP
+  [falha] Clínica Offline: ViaCEP indisponível após 3 tentativas (ViaCEP respondeu HTTP 500)
 
-─────────── resumo ───────────
+=========== resumo ===========
   processadas: 6
   sucesso:     2
   falhas:      4
@@ -154,22 +154,22 @@ uma arquitetura maior seria enfeite.
 ## Decisões que tomei
 
 **Node.js sem nenhuma dependência de runtime.** O Node 18+ já traz `fetch`, e o
-`node:test` já é test runner. Menos dependência é menos superfície para
-quebrar, um `npm install` que não baixa nada, e — importante para uma entrega
-que vou defender numa conversa — nenhuma linha que eu não saiba explicar.
+`node:test` já é test runner. Menos dependência é menos superfície para quebrar,
+um `npm install` que não baixa nada, e, importante para uma entrega que vou
+defender numa conversa, nenhuma linha que eu não saiba explicar.
 
 **Parser de CSV escrito à mão, em vez de biblioteca.** A coluna `servicos` vem
 entre aspas (`"Consulta;Exame;Retorno"`). Esse é exatamente o caso em que um
 `split(',')` funciona por sorte hoje e quebra amanhã, quando aparecer uma
-vírgula dentro do campo — como em `"Clínica Vírgula, Ltda"`. São ~40 linhas que
-tratam aspas, aspas escapadas, vírgula e quebra de linha dentro do campo, CRLF e
-BOM do Excel.
+vírgula dentro do campo, como em `"Clínica Vírgula, Ltda"`. São cerca de 40
+linhas que tratam aspas, aspas escapadas, vírgula e quebra de linha dentro do
+campo, CRLF e BOM do Excel.
 
 **Falha permanente e falha transitória são coisas diferentes.** CEP inválido ou
-inexistente falha de imediato — repetir não muda a resposta e só gasta tempo com
-a clínica esperando. Timeout, erro de rede e HTTP 5xx são retentados 3 vezes com
-espera crescente (500ms, 1s), porque instabilidade momentânea de API é comum e
-não deveria custar uma unidade.
+inexistente falha de imediato, porque repetir não muda a resposta e só gasta
+tempo com a clínica esperando. Timeout, erro de rede e HTTP 5xx são retentados 3
+vezes com espera crescente (500ms, 1s), porque instabilidade momentânea de API é
+comum e não deveria custar uma unidade.
 
 **Trato o `{"erro": true}` do ViaCEP.** Para um CEP bem formado mas inexistente,
 a API responde **HTTP 200** com esse corpo. Quem confia só no status code grava
@@ -187,13 +187,13 @@ visível; ficar dentro pela metade, não.
 a lista que o cliente mandou provisionar, então ele é a fonte da verdade. Mas
 comparo a cidade do CSV com a que o CEP aponta e, se divergirem, a unidade é
 provisionada **com um aviso** no resumo. Divergência quase sempre é digitação
-errada, e o time precisa saber — sem que isso bloqueie a abertura da unidade.
+errada, e o time precisa saber, sem que isso bloqueie a abertura da unidade.
 
 **Consultas em sequência, não em paralelo.** São três unidades e o ViaCEP é uma
 API pública e gratuita; não custa nada ser educado com ela.
 
 **Código de saída.** `1` só quando nada foi provisionado ou o CSV é ilegível.
-Sucesso parcial sai com `0` — quem chamar este script de dentro de outra
+Sucesso parcial sai com `0`, porque quem chamar este script de dentro de outra
 automação precisa distinguir "rodou e teve problema em uma unidade" de "não
 produziu nada".
 
@@ -204,17 +204,17 @@ produziu nada".
 **O parser de CSV não é uma implementação completa de RFC 4180.** Cobre o que o
 formato do desafio exige e um bom pedaço do que aparece na prática, mas não
 trata separador diferente de vírgula (o Excel em português exporta com `;`) nem
-codificação diferente de UTF-8 — um arquivo salvo em ANSI vai chegar com acento
+codificação diferente de UTF-8. Um arquivo salvo em ANSI vai chegar com acento
 corrompido. Se aparecer CSV de origem variada, eu trocaria por `csv-parse`.
 
 **Só a consulta de CEP tem teste.** Foi onde concentrei o bônus por ser a parte
 de maior risco. O parser de CSV e o `gerarSlug` ainda não têm cobertura, e são o
-que eu escreveria em seguida — o parser especialmente, por ser código meu e não
+que eu escreveria em seguida, o parser especialmente, por ser código meu e não
 de biblioteca.
 
 **Slugs não são checados contra duplicidade.** Duas unidades com o mesmo nome
 geram o mesmo slug e ninguém percebe. Numa versão de produção eu adicionaria um
-sufixo numérico ou usaria cidade + nome na composição.
+sufixo numérico ou usaria cidade mais nome na composição.
 
 **O processamento sequencial não escala.** Para as 3 unidades do desafio é
 irrelevante; para algumas centenas eu paralelizaria com limite de concorrência
@@ -234,6 +234,6 @@ validação local; se o CEP existe mesmo, quem decide é o ViaCEP.
 O enunciado pede no máximo um. Escolhi **testes automatizados**, em
 `tests/viacep.test.js`: três testes sobre `consultarCep`, cobrindo sucesso, CEP
 inexistente e API fora do ar. Escolhi essa função porque é a única que fala com
-o mundo externo — é onde mora o requisito de "o script não pode quebrar", e o
+o mundo externo. É onde mora o requisito de "o script não pode quebrar", e o
 único ponto onde um bug passaria despercebido até chegar no cliente. O `fetch` é
 injetado, então os testes rodam offline e sem variação.

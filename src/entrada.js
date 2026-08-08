@@ -59,7 +59,7 @@ export function carregarUnidades(caminho) {
 
   return registros.map((registro, indice) => ({
     // +2 porque o índice começa em zero e a primeira linha do arquivo é o
-    // cabeçalho — assim o número bate com o que a pessoa vê no editor.
+    // cabeçalho, assim o número bate com o que a pessoa vê no editor.
     linha: indice + 2,
     nome: registro.nome,
     cidade: registro.cidade,
