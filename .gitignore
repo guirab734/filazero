@@ -1,0 +1,4 @@
+node_modules/
+
+# Saída gerada pelo script — é artefato de execução, não código-fonte.
+provisionamento.json
