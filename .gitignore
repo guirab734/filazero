@@ -2,3 +2,6 @@ node_modules/
 
 # Saída gerada pelo script — é artefato de execução, não código-fonte.
 provisionamento.json
+
+# Memória local do assistente: preferência de trabalho, não faz parte da entrega.
+CLAUDE.local.md
