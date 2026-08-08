@@ -34,7 +34,19 @@ export function separarServicos(valor) {
  * @returns {{ linha: number, nome: string, cidade: string, uf: string, cep: string, servicos: string[] }[]}
  */
 export function carregarUnidades(caminho) {
-  const texto = readFileSync(caminho, 'utf8');
+  let texto;
+  try {
+    texto = readFileSync(caminho, 'utf8');
+  } catch (erro) {
+    if (erro.code === 'ENOENT') {
+      throw new Error('arquivo não encontrado, confira o caminho');
+    }
+    if (erro.code === 'EACCES') {
+      throw new Error('sem permissão de leitura no arquivo');
+    }
+    throw erro;
+  }
+
   const { colunas, registros } = lerCsvComCabecalho(texto);
 
   const faltando = COLUNAS_OBRIGATORIAS.filter((coluna) => !colunas.includes(coluna));
