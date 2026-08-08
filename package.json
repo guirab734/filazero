@@ -1,0 +1,14 @@
+{
+  "name": "provisionamento-unidades",
+  "version": "1.0.0",
+  "description": "Automação de provisionamento: lê o CSV de unidades, enriquece o endereço via ViaCEP e gera o provisionamento.json.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node provisionar.js",
+    "test": "node --test tests/"
+  },
+  "license": "MIT"
+}
