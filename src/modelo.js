@@ -35,7 +35,7 @@ export function formatarCep(cep) {
  *
  * Cidade, UF e CEP saem do CSV, não da resposta da API: o CSV é a lista que o
  * cliente mandou provisionar, então ele é a fonte da verdade. O ViaCEP entra
- * para completar logradouro e bairro — e para conferir a cidade (ver
+ * para completar logradouro e bairro, e para conferir a cidade (ver
  * `divergenciaDeCidade`).
  *
  * @param {{ nome: string, cidade: string, uf: string, cep: string, servicos: string[] }} unidade
@@ -60,7 +60,7 @@ export function montarRegistroDeProvisionamento(unidade, endereco) {
 /**
  * Compara a cidade do CSV com a que o ViaCEP devolveu para aquele CEP.
  *
- * Divergência aqui quase sempre é erro de digitação no CSV — o CEP aponta para
+ * Divergência aqui quase sempre é erro de digitação no CSV: o CEP aponta para
  * outra cidade. Não é motivo para descartar a unidade, mas alguém precisa
  * olhar, então vira aviso no resumo.
  *

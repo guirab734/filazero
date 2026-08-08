@@ -4,7 +4,7 @@
  *
  * Rodar com: npm test
  *
- * O `fetch` é injetado em vez de real — os testes não dependem de rede, então
+ * O `fetch` é injetado em vez de real, os testes não dependem de rede, então
  * rodam offline e sempre com o mesmo resultado.
  */
 
