@@ -28,17 +28,7 @@ git clone https://github.com/guirab734/filazero.git
 cd filazero
 ```
 
-**2. Instale as dependências**
-
-```bash
-npm install
-```
-
-O projeto **não tem dependências de runtime**, então esse comando não baixa
-nada, ele só confere o `package-lock.json`. Se preferir, pode pular direto para
-o passo 3.
-
-**3. Rode a automação**
+**2. Rode a automação**
 
 ```bash
 npm start
@@ -50,14 +40,16 @@ Ou, equivalente:
 node provisionar.js
 ```
 
-**4. Confira a saída**
+Não precisa de `npm install`: o projeto não tem nenhuma dependência.
+
+**3. Confira a saída**
 
 O arquivo `provisionamento.json` é criado na raiz do projeto.
 
 ### Apontando para outros arquivos
 
 ```bash
-node provisionar.js caminho/do/entrada.csv caminho/da/saida.json
+node provisionar.js entrada.csv saida.json
 ```
 
 ### Rodando os testes
@@ -90,9 +82,10 @@ Quando alguma unidade falha, ela aparece no resumo com o motivo e o script segue
 normalmente:
 
 ```
-  [falha] Clínica CEP Curto: CEP "4901" é inválido: esperado 8 dígitos, encontrado 4
+  [falha] Clínica CEP Curto: CEP "4901" inválido: esperado 8 dígitos, encontrado 4
   [falha] Clínica Inexistente: CEP não encontrado na base do ViaCEP
-  [falha] Clínica Offline: ViaCEP indisponível após 3 tentativas (ViaCEP respondeu HTTP 500)
+  [falha] Clínica Offline: ViaCEP indisponível após 3 tentativas
+  [falha] linha 5: linha sem a coluna "nome" preenchida
 
 =========== resumo ===========
   processadas: 6
@@ -100,11 +93,10 @@ normalmente:
   falhas:      4
 
   não provisionadas:
-    - Clínica CEP Curto: CEP "4901" é inválido: esperado 8 dígitos, encontrado 4
-    ...
-
-  avisos (provisionadas, mas confira):
-    - Clínica Cidade Errada: CSV diz "São Paulo", mas o CEP 49010-390 é de "Aracaju"
+    - Clínica CEP Curto: CEP "4901" inválido: esperado 8 dígitos, encontrado 4
+    - Clínica Inexistente: CEP não encontrado na base do ViaCEP
+    - Clínica Offline: ViaCEP indisponível após 3 tentativas
+    - linha 5: linha sem a coluna "nome" preenchida
 ```
 
 ### Formato do `provisionamento.json`
@@ -133,37 +125,35 @@ Uma lista com um objeto por unidade provisionada:
 ## Organização
 
 ```
-provisionar.js          entrypoint: orquestra o fluxo e imprime o resumo
-src/
-  csv.js                parser de CSV
-  entrada.js            leitura e validação do arquivo de unidades
-  viacep.js             cliente da API, com timeout e retentativa
-  modelo.js             slug, formatação de CEP e montagem do registro
-tests/
-  viacep.test.js        testes da consulta de CEP
+provisionar.js          o script inteiro
+provisionar.test.js     testes da consulta de CEP
 unidades.csv            entrada de exemplo (a do enunciado)
 resposta-suporte.md     Parte 2 do desafio
 ```
 
-Cada módulo tem uma responsabilidade só, o que mantém tudo testável sem `fetch`
-de verdade. São arquivos pequenos de propósito: para um desafio deste tamanho,
-uma arquitetura maior seria enfeite.
+O script tem quatro funções, na ordem em que o fluxo acontece: `lerCsv`,
+`consultarCep`, `gerarSlug` e `main`. Dá para ler de cima a baixo sem pular
+entre arquivos.
 
 ---
 
 ## Decisões que tomei
 
-**Node.js sem nenhuma dependência de runtime.** O Node 18+ já traz `fetch`, e o
-`node:test` já é test runner. Menos dependência é menos superfície para quebrar,
-um `npm install` que não baixa nada, e, importante para uma entrega que vou
-defender numa conversa, nenhuma linha que eu não saiba explicar.
+**Um arquivo só.** A primeira versão estava dividida em quatro módulos dentro de
+`src/`, e isso era cerimônia para um script de 190 linhas: obrigava a pular
+entre arquivos para entender um fluxo que é linear. Juntei tudo. As funções
+continuam exportadas, então o teste importa o que precisa sem executar o
+provisionamento.
 
-**Parser de CSV escrito à mão, em vez de biblioteca.** A coluna `servicos` vem
+**Node.js sem nenhuma dependência.** O Node 18+ já traz `fetch`, e o `node:test`
+já é test runner. Menos dependência é menos superfície para quebrar, um clone
+que roda de imediato, e, importante para uma entrega que vou defender numa
+conversa, nenhuma linha que eu não saiba explicar.
+
+**Leitura de CSV escrita à mão, em vez de biblioteca.** A coluna `servicos` vem
 entre aspas (`"Consulta;Exame;Retorno"`). Esse é exatamente o caso em que um
 `split(',')` funciona por sorte hoje e quebra amanhã, quando aparecer uma
-vírgula dentro do campo, como em `"Clínica Vírgula, Ltda"`. São cerca de 40
-linhas que tratam aspas, aspas escapadas, vírgula e quebra de linha dentro do
-campo, CRLF e BOM do Excel.
+vírgula dentro do campo, como em `"Clínica Vírgula, Ltda"`. São 25 linhas.
 
 **Falha permanente e falha transitória são coisas diferentes.** CEP inválido ou
 inexistente falha de imediato, porque repetir não muda a resposta e só gasta
@@ -184,10 +174,8 @@ final, enquanto unidade ausente aparece no resumo e alguém age. Ficar de fora �
 visível; ficar dentro pela metade, não.
 
 **Cidade, UF e CEP saem do CSV; o ViaCEP completa logradouro e bairro.** O CSV é
-a lista que o cliente mandou provisionar, então ele é a fonte da verdade. Mas
-comparo a cidade do CSV com a que o CEP aponta e, se divergirem, a unidade é
-provisionada **com um aviso** no resumo. Divergência quase sempre é digitação
-errada, e o time precisa saber, sem que isso bloqueie a abertura da unidade.
+a lista que o cliente mandou provisionar, então ele é a fonte da verdade sobre
+onde a unidade fica. O ViaCEP entra só para preencher o que falta.
 
 **Consultas em sequência, não em paralelo.** São três unidades e o ViaCEP é uma
 API pública e gratuita; não custa nada ser educado com ela.
@@ -201,16 +189,21 @@ produziu nada".
 
 ## Limitações conhecidas
 
-**O parser de CSV não é uma implementação completa de RFC 4180.** Cobre o que o
+**A leitura de CSV não é uma implementação completa de RFC 4180.** Cobre o que o
 formato do desafio exige e um bom pedaço do que aparece na prática, mas não
-trata separador diferente de vírgula (o Excel em português exporta com `;`) nem
-codificação diferente de UTF-8. Um arquivo salvo em ANSI vai chegar com acento
-corrompido. Se aparecer CSV de origem variada, eu trocaria por `csv-parse`.
+trata aspas escapadas (`""` dentro de um campo entre aspas), separador diferente
+de vírgula (o Excel em português exporta com `;`) nem codificação diferente de
+UTF-8: um arquivo salvo em ANSI chega com acento corrompido. Se aparecer CSV de
+origem variada, eu trocaria por `csv-parse`.
 
 **Só a consulta de CEP tem teste.** Foi onde concentrei o bônus por ser a parte
-de maior risco. O parser de CSV e o `gerarSlug` ainda não têm cobertura, e são o
-que eu escreveria em seguida, o parser especialmente, por ser código meu e não
-de biblioteca.
+de maior risco. `lerCsv` e `gerarSlug` ainda não têm cobertura, e são o que eu
+escreveria em seguida, `lerCsv` especialmente, por ser código meu e não de
+biblioteca.
+
+**Não confiro se a cidade do CSV bate com a do CEP.** Se alguém digitar a cidade
+errada, a unidade é provisionada assim mesmo. Daria para comparar a cidade do
+CSV com a que o ViaCEP devolve e emitir um aviso, sem bloquear a abertura.
 
 **Slugs não são checados contra duplicidade.** Duas unidades com o mesmo nome
 geram o mesmo slug e ninguém percebe. Numa versão de produção eu adicionaria um
@@ -232,7 +225,7 @@ validação local; se o CEP existe mesmo, quem decide é o ViaCEP.
 ## Sobre o bônus
 
 O enunciado pede no máximo um. Escolhi **testes automatizados**, em
-`tests/viacep.test.js`: três testes sobre `consultarCep`, cobrindo sucesso, CEP
+`provisionar.test.js`: três testes sobre `consultarCep`, cobrindo sucesso, CEP
 inexistente e API fora do ar. Escolhi essa função porque é a única que fala com
 o mundo externo. É onde mora o requisito de "o script não pode quebrar", e o
 único ponto onde um bug passaria despercebido até chegar no cliente. O `fetch` é
