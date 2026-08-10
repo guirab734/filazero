@@ -131,19 +131,26 @@ unidades.csv            entrada de exemplo (a do enunciado)
 resposta-suporte.md     Parte 2 do desafio
 ```
 
-O script tem quatro funções, na ordem em que o fluxo acontece: `lerCsv`,
-`consultarCep`, `gerarSlug` e `main`. Dá para ler de cima a baixo sem pular
-entre arquivos.
+O arquivo está dividido em quatro blocos, na ordem em que o fluxo acontece:
+leitura do CSV, consulta ao ViaCEP, montagem do registro e execução. Cada bloco
+tem funções pequenas com nome do que fazem, então dá para ler de cima a baixo
+sem pular entre arquivos.
 
 ---
 
 ## Decisões que tomei
 
 **Um arquivo só.** A primeira versão estava dividida em quatro módulos dentro de
-`src/`, e isso era cerimônia para um script de 190 linhas: obrigava a pular
-entre arquivos para entender um fluxo que é linear. Juntei tudo. As funções
-continuam exportadas, então o teste importa o que precisa sem executar o
-provisionamento.
+`src/`, e isso era cerimônia para um script curto: obrigava a pular entre
+arquivos para entender um fluxo que é linear. Juntei tudo. As funções continuam
+exportadas, então o teste importa o que precisa sem executar o provisionamento.
+
+**Código explícito, em vez de código curto.** Prefiro `for` com `if` a
+encadeamento de `filter` com `some`, e prefiro guardar cada etapa numa constante
+com nome descritivo a espremer tudo numa linha. O arquivo fica mais longo, e é
+uma troca consciente: numa entrega em que preciso explicar cada linha, ganha
+mais quem lê rápido do que quem escreve pouco. Pelo mesmo motivo evitei
+desestruturação e atalhos como `?.` e `??` onde um `if` diz a mesma coisa.
 
 **Node.js sem nenhuma dependência.** O Node 18+ já traz `fetch`, e o `node:test`
 já é test runner. Menos dependência é menos superfície para quebrar, um clone
@@ -153,7 +160,9 @@ conversa, nenhuma linha que eu não saiba explicar.
 **Leitura de CSV escrita à mão, em vez de biblioteca.** A coluna `servicos` vem
 entre aspas (`"Consulta;Exame;Retorno"`). Esse é exatamente o caso em que um
 `split(',')` funciona por sorte hoje e quebra amanhã, quando aparecer uma
-vírgula dentro do campo, como em `"Clínica Vírgula, Ltda"`. São 25 linhas.
+vírgula dentro do campo, como em `"Clínica Vírgula, Ltda"`. A leitura acontece
+em três funções separadas: separar em linhas e campos, descartar linhas vazias e
+casar cada linha com o cabeçalho.
 
 **Falha permanente e falha transitória são coisas diferentes.** CEP inválido ou
 inexistente falha de imediato, porque repetir não muda a resposta e só gasta
