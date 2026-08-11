@@ -12,12 +12,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Endereço da API de CEP. Normalmente é o ViaCEP de verdade, mas dá para
-// apontar para um servidor de teste definindo a variável de ambiente.
-let ENDERECO_DA_API = 'https://viacep.com.br/ws';
-if (process.env.VIACEP_BASE_URL) {
-  ENDERECO_DA_API = process.env.VIACEP_BASE_URL;
-}
+// Endereço base da API pública de CEP.
+const ENDERECO_DA_API = 'https://viacep.com.br/ws';
 
 // Colunas que o CSV precisa ter para o script conseguir trabalhar.
 const COLUNAS_OBRIGATORIAS = ['nome', 'cidade', 'uf', 'cep', 'servicos'];
