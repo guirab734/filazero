@@ -1,47 +1,31 @@
 #!/usr/bin/env node
-/**
- * Provisionamento de unidades.
- *
- * Lê o CSV de unidades, completa o endereço de cada uma consultando o ViaCEP,
- * grava o provisionamento.json e imprime um resumo do que deu certo e do que
- * falhou.
- *
- * Uso: node provisionar.js [entrada.csv] [saida.json]
- */
+
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Endereço base da API pública de CEP.
+
 const ENDERECO_DA_API = 'https://viacep.com.br/ws';
 
-// Colunas que o CSV precisa ter para o script conseguir trabalhar.
+
 const COLUNAS_OBRIGATORIAS = ['nome', 'cidade', 'uf', 'cep', 'servicos'];
 
-/**
- * Pausa a execução pelo número de milissegundos pedido.
- * Usada entre as tentativas de consulta ao ViaCEP.
- */
+
 function espera(milissegundos) {
   return new Promise(function (avisarQueTerminou) {
     setTimeout(avisarQueTerminou, milissegundos);
   });
 }
 
-// ---------------------------------------------------------------------------
-// Leitura do CSV
-// ---------------------------------------------------------------------------
 
-/**
- * Percorre o texto do CSV caractere a caractere e devolve uma lista de linhas,
- * onde cada linha é uma lista de campos.
- *
- * Precisa ser caractere a caractere por causa das aspas: a coluna servicos vem
- * como "Consulta;Exame;Retorno", e uma vírgula dentro das aspas faz parte do
- * texto, não separa campo. Um texto.split(',') não sabe dessa diferença.
- */
+
+
+
+
+
+// Campos entre aspas podem conter vírgulas e quebras de linha.
 function separarEmLinhasECampos(textoOriginal) {
-  // Tira o BOM, caractere invisível que o Excel coloca no começo do arquivo.
+  
   const texto = textoOriginal.replace(/^\uFEFF/, '');
 
   const linhas = [];
@@ -51,8 +35,8 @@ function separarEmLinhasECampos(textoOriginal) {
 
   for (const caractere of texto) {
     if (caractere === '"') {
-      // Aspas não entram no texto do campo. Elas só ligam e desligam o modo
-      // "o que vier agora é texto comum".
+      
+      
       if (estouDentroDeAspas) {
         estouDentroDeAspas = false;
       } else {
@@ -62,35 +46,33 @@ function separarEmLinhasECampos(textoOriginal) {
     }
 
     if (caractere === ',' && estouDentroDeAspas === false) {
-      // Vírgula fora das aspas termina o campo atual.
       camposDaLinhaAtual.push(campoAtual);
       campoAtual = '';
       continue;
     }
 
     if (caractere === '\n' && estouDentroDeAspas === false) {
-      // Quebra de linha fora das aspas termina o campo e a linha.
       camposDaLinhaAtual.push(campoAtual);
       linhas.push(camposDaLinhaAtual);
 
-      // Listas novas para a próxima linha. Se reaproveitássemos as mesmas, a
-      // linha já guardada em "linhas" seria alterada junto.
+      
+      
       camposDaLinhaAtual = [];
       campoAtual = '';
       continue;
     }
 
     if (caractere === '\r') {
-      // Arquivos feitos no Windows terminam a linha com \r\n. O \r é descartado
-      // para não sobrar preso no fim do último campo.
+      
+      
       continue;
     }
 
     campoAtual = campoAtual + caractere;
   }
 
-  // Se o arquivo não terminar com quebra de linha, a última linha ficou
-  // pendente, porque o gatilho que fecha a linha é o \n, que não veio.
+  
+  
   const sobrouTexto = campoAtual !== '';
   const sobraramCampos = camposDaLinhaAtual.length > 0;
   if (sobrouTexto || sobraramCampos) {
@@ -101,10 +83,7 @@ function separarEmLinhasECampos(textoOriginal) {
   return linhas;
 }
 
-/**
- * Descarta as linhas em que todos os campos estão vazios.
- * Linha em branco no fim do arquivo é comum e não é uma unidade.
- */
+
 function removerLinhasVazias(linhas) {
   const linhasUteis = [];
 
@@ -112,8 +91,8 @@ function removerLinhasVazias(linhas) {
     let temAlgumConteudo = false;
 
     for (const campo of linha) {
-      // trim() tira os espaços das pontas. Uma linha só com espaços continua
-      // sendo uma linha vazia.
+      
+      
       if (campo.trim() !== '') {
         temAlgumConteudo = true;
         break;
@@ -128,16 +107,7 @@ function removerLinhasVazias(linhas) {
   return linhasUteis;
 }
 
-/**
- * Casa cada linha de dados com o cabeçalho, pela posição, e devolve objetos.
- *
- * cabecalho     ["nome", "cidade"]
- * linha         ["Clínica Vida Aracaju", "Aracaju"]
- * vira          { nome: "Clínica Vida Aracaju", cidade: "Aracaju" }
- *
- * Isso é o que permite escrever unidade.cep no resto do código, em vez de
- * linha[3], que quebraria se alguém reordenasse as colunas do arquivo.
- */
+
 function transformarLinhasEmObjetos(cabecalho, linhasDeDados) {
   const registros = [];
 
@@ -147,8 +117,8 @@ function transformarLinhasEmObjetos(cabecalho, linhasDeDados) {
     for (let coluna = 0; coluna < cabecalho.length; coluna++) {
       const nomeDaColuna = cabecalho[coluna].trim();
 
-      // A linha pode ter menos campos que o cabeçalho. Nesse caso o valor vem
-      // undefined, e undefined.trim() derrubaria o script.
+      
+      
       let valor = linha[coluna];
       if (valor === undefined) {
         valor = '';
@@ -163,37 +133,27 @@ function transformarLinhasEmObjetos(cabecalho, linhasDeDados) {
   return registros;
 }
 
-/**
- * Lê o texto de um CSV e devolve uma lista de objetos, um por linha de dados.
- */
+
 export function lerCsv(texto) {
   const todasAsLinhas = separarEmLinhasECampos(texto);
   const linhasUteis = removerLinhasVazias(todasAsLinhas);
 
-  // Sem nenhuma linha não há nem cabeçalho para trabalhar.
+  
   if (linhasUteis.length === 0) {
     return [];
   }
 
   const cabecalho = linhasUteis[0];
-  const linhasDeDados = linhasUteis.slice(1); // tudo a partir da posição 1
+  const linhasDeDados = linhasUteis.slice(1); 
 
   return transformarLinhasEmObjetos(cabecalho, linhasDeDados);
 }
 
-// ---------------------------------------------------------------------------
-// Consulta ao ViaCEP
-// ---------------------------------------------------------------------------
 
-/**
- * Consulta um CEP no ViaCEP e devolve o logradouro e o bairro.
- *
- * Quando alguma coisa dá errado, lança um Error com mensagem legível, para
- * quem chamou registrar a falha e seguir para a próxima unidade.
- *
- * O segundo parâmetro é opcional e serve para os testes trocarem o fetch e a
- * espera por versões falsas, que rodam sem rede e sem gastar segundos.
- */
+
+
+
+
 export async function consultarCep(cep, opcoes) {
   if (!opcoes) {
     opcoes = {};
@@ -214,12 +174,12 @@ export async function consultarCep(cep, opcoes) {
     dormir = opcoes.dormir;
   }
 
-  // O CSV traz o CEP com hífen ("49010-390") e o ViaCEP só aceita os 8 dígitos.
-  // O \D casa tudo que não é dígito, e o g aplica em todas as ocorrências.
+  
+  
   const digitos = String(cep).replace(/\D/g, '');
 
-  // CEP fora do formato nem vira chamada de rede: é mais rápido e a mensagem
-  // de erro fica mais precisa do que um 400 vindo da API.
+  
+  
   if (digitos.length !== 8) {
     throw new Error(`CEP "${cep}" inválido: esperado 8 dígitos, encontrado ${digitos.length}`);
   }
@@ -248,6 +208,8 @@ export async function consultarCep(cep, opcoes) {
       // Pegadinha da API: para um CEP bem formado mas inexistente, o ViaCEP
       // responde HTTP 200 com {"erro": true}. Quem olha só o status acaba
       // gravando um endereço vazio no arquivo de provisionamento.
+      // O ViaCEP também retorna CEP inexistente com HTTP 200.
+      // O ViaCEP também retorna CEP inexistente com HTTP 200.
       if (dados.erro) {
         throw new Error('CEP não encontrado na base do ViaCEP');
       }
@@ -273,6 +235,8 @@ export async function consultarCep(cep, opcoes) {
     // Sobrou o transitório: queda de rede, tempo esgotado ou erro 5xx do
     // servidor. Espera um pouco e tenta de novo, dobrando o tempo a cada volta
     // (500ms, depois 1s) para não insistir em cima de um servidor com problema.
+    // Apenas falhas transitórias recebem novas tentativas, com espera crescente.
+    // Apenas falhas transitórias recebem novas tentativas, com espera crescente.
     const ehAUltimaTentativa = tentativa === tentativas;
     if (!ehAUltimaTentativa) {
       const tempoDeEspera = 500 * Math.pow(2, tentativa - 1);
@@ -348,6 +312,8 @@ function separarServicos(textoDosServicos) {
  * Cidade, UF e CEP saem do CSV, que é a lista que o cliente mandou provisionar.
  * O ViaCEP entra só para completar logradouro e bairro.
  */
+// Cidade e UF permanecem as do CSV; o ViaCEP completa rua e bairro.
+// Cidade e UF permanecem as do CSV; o ViaCEP completa rua e bairro.
 function montarRegistro(unidade, endereco) {
   return {
     unidade: unidade.nome,
@@ -463,6 +429,8 @@ async function main() {
 
   // Passo 4: uma unidade por vez. Em sequência de propósito, porque são poucas
   // unidades e o ViaCEP é uma API pública e gratuita.
+  // Consultas sequenciais evitam sobrecarregar a API pública.
+  // Consultas sequenciais evitam sobrecarregar a API pública.
   for (let posicao = 0; posicao < unidades.length; posicao++) {
     const unidade = unidades[posicao];
 
